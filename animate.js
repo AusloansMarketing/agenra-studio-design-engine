@@ -1,6 +1,10 @@
 /*
   STUDIO SHARED DESIGN ENGINE
-  animate.js — v1.0.0
+  animate.js — v1.2.0
+
+  v1.2.0 adds nav dropdown and mobile menu toggle behavior — see the
+  bottom of this file. Everything above (scroll/reveal presets, modal
+  system) is unchanged from v1.1.0.
 
   Loaded identically on every client site, after gsap.min.js and
   ScrollTrigger.min.js, via Site Settings -> Head Tracking Code.
@@ -180,4 +184,108 @@
   } else {
     init();
   }
+})();
+
+/*
+  Modal system — data-attribute driven, same spirit as data-animate.
+
+  Trigger any CTA with:
+    <button class="btn btn--accent" data-open-modal="finance-app">Compare rates</button>
+
+  Markup the modal once per page (placed anywhere, e.g. just before </body>):
+    <div class="dialog__scrim" id="modal-finance-app" data-modal>
+      <div class="dialog dialog--iframe">
+        <button class="icon-btn dialog__close" data-close-modal aria-label="Close">
+          <!-- close icon svg -->
+        </button>
+        <!-- PLACEHOLDER: swap in the real finance application iframe once supplied -->
+        <iframe src="about:blank" title="Finance application"></iframe>
+      </div>
+    </div>
+
+  Multiple different modals can exist on one page (different data-open-modal
+  values matched to different element IDs) — not every CTA has to point at
+  the same widget if that ever changes.
+*/
+(function () {
+  document.addEventListener("click", function (e) {
+    var opener = e.target.closest("[data-open-modal]");
+    if (opener) {
+      var modal = document.getElementById("modal-" + opener.dataset.openModal);
+      if (modal) modal.classList.add("is-open");
+      return;
+    }
+    // Close on backdrop click (clicking the scrim itself, not its contents) or the close button
+    var scrim = e.target.closest("[data-modal]");
+    var isBackdropClick = scrim && e.target === scrim;
+    var closer = e.target.closest("[data-close-modal]");
+    if (isBackdropClick || closer) {
+      var openModal = e.target.closest(".dialog__scrim");
+      if (openModal) openModal.classList.remove("is-open");
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    document.querySelectorAll(".dialog__scrim.is-open").forEach(function (m) {
+      m.classList.remove("is-open");
+    });
+  });
+})();
+
+/*
+  Navigation — dropdown menus and mobile toggle.
+
+  Markup contract:
+    <div class="nav-dropdown">
+      <button class="nav-dropdown__trigger" aria-expanded="false">Services</button>
+      <div class="nav-dropdown__menu">...</div>
+    </div>
+
+    <button class="nav-mobile-toggle icon-btn" data-nav-toggle aria-expanded="false" aria-label="Open menu">...</button>
+    <nav class="nav-primary" data-nav-primary>...</nav>
+*/
+(function () {
+  document.addEventListener("click", function (e) {
+    var trigger = e.target.closest(".nav-dropdown__trigger");
+    var clickedInsideDropdown = e.target.closest(".nav-dropdown");
+
+    if (trigger) {
+      var dropdown = trigger.closest(".nav-dropdown");
+      var wasOpen = dropdown.classList.contains("is-open");
+      document.querySelectorAll(".nav-dropdown.is-open").forEach(function (d) {
+        d.classList.remove("is-open");
+        d.querySelector(".nav-dropdown__trigger").setAttribute("aria-expanded", "false");
+      });
+      if (!wasOpen) {
+        dropdown.classList.add("is-open");
+        trigger.setAttribute("aria-expanded", "true");
+      }
+      return;
+    }
+
+    // Click outside any dropdown closes all of them
+    if (!clickedInsideDropdown) {
+      document.querySelectorAll(".nav-dropdown.is-open").forEach(function (d) {
+        d.classList.remove("is-open");
+        d.querySelector(".nav-dropdown__trigger").setAttribute("aria-expanded", "false");
+      });
+    }
+
+    var mobileToggle = e.target.closest("[data-nav-toggle]");
+    if (mobileToggle) {
+      var nav = document.querySelector("[data-nav-primary]");
+      if (!nav) return;
+      var isOpen = nav.classList.toggle("is-open");
+      mobileToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    document.querySelectorAll(".nav-dropdown.is-open").forEach(function (d) {
+      d.classList.remove("is-open");
+      d.querySelector(".nav-dropdown__trigger").setAttribute("aria-expanded", "false");
+    });
+  });
 })();
